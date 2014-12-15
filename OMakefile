@@ -1,0 +1,15 @@
+# Health checks from inside a process
+
+OCAML_LIBS = $(OCAML_LIBS_health)
+
+FILES[] =
+  health
+
+OCamlLibrary(health, $(FILES))
+Meta(health)
+
+.DEFAULT: META health.cma health.cmxa
+
+.PHONY: clean
+clean:
+	rm -f *.o *.a *.cm* *~ *.annot *.run *.opt META
