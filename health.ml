@@ -1,6 +1,8 @@
 open Lwt
 open Log
 
+let instance_id = ref "unknown"
+
 let try_finally f g =
   catch
     (fun () ->
@@ -40,12 +42,12 @@ let get_fd_count () =
   else
     return None
 
-let health_check instance_id =
+let health_check () =
   get_fd_count () >>= function
   | None -> return ()
   | Some fd_count ->
       Cloudwatch.send
-        (instance_id ^ ".fd_count")
+        (!instance_id ^ ".fd_count")
         (float fd_count)
 
 let repeat_every_minute f =
@@ -68,7 +70,7 @@ let repeat_every_minute f =
      "wolverine.api.proc.ip-10-165-33-20.41001"
    is valid.
 *)
-let monitor instance_id =
-  Cloudwatch.send_event (instance_id ^ ".start") >>= fun () ->
-  repeat_every_minute (fun () -> health_check instance_id);
+let monitor () =
+  Cloudwatch.send_event (!instance_id ^ ".start") >>= fun () ->
+  repeat_every_minute health_check;
   return ()
