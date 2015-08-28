@@ -13,7 +13,7 @@ let try_finally f g =
     )
     (fun e ->
        g () >>= fun () ->
-       raise e
+       Util_exn.reraise e
     )
 
 (* Must run the same process because the contents of /proc/self
