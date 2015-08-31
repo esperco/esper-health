@@ -13,7 +13,7 @@ let try_finally f g =
     )
     (fun e ->
        g () >>= fun () ->
-       raise e
+       Trax.raise __LOC__ e
     )
 
 (* Must run the same process because the contents of /proc/self
