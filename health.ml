@@ -4,52 +4,18 @@ open Log
 (* something like "proc.ip-10-136-83-8.scgi41001" *)
 let instance_id = ref "unknown"
 
-let try_finally f g =
-  catch
-    (fun () ->
-       f () >>= fun x ->
-       g () >>= fun () ->
-       return x
-    )
-    (fun e ->
-       g () >>= fun () ->
-       Trax.raise __LOC__ e
-    )
-
-(* Must run the same process because the contents of /proc/self
-   depend on the calling process. *)
-let ls dirname =
-  Lwt_unix.opendir dirname >>= fun dir ->
-  let rec read acc =
-    let maxlen = 1025 in
-    Lwt_unix.readdir_n dir maxlen >>= fun a ->
-    let acc = List.rev_append (Array.to_list a) acc in
-    if Array.length a < maxlen then
-      return (List.rev acc)
-    else
-      read acc
-  in
-  try_finally
-    (fun () -> read [])
-    (fun () -> Lwt_unix.closedir dir)
-
-let get_fd_count () =
-  let dirname = "/proc/self/fd" in
-  if Sys.file_exists dirname (* Linux only *) then
-    ls dirname >>= fun l ->
-    (* Exclude . and ..; assume all other files are decimal numbers
-       identifying file descriptors *)
-    return (Some (List.length l - 2))
-  else
-    return None
-
 let health_check () =
-  get_fd_count () >>= function
+  let pid = Unix.getpid () in
+  let prefix = "wolverine.api." ^ !instance_id in
+  (match Util_linux.get_resident_memory_size pid with
+   | None -> return ()
+   | Some x ->
+       Cloudwatch.send (prefix ^ ".mem.rss") x
+  ) >>= fun () ->
+  Util_linux.get_fd_count pid >>= function
   | None -> return ()
   | Some fd_count ->
-      Cloudwatch.send
-        ("wolverine.api." ^ !instance_id ^ ".fd_count")
-        (float fd_count)
+      Cloudwatch.send (prefix ^ ".fd_count") (float fd_count)
 
 let repeat_every_minute f =
   let rec loop () =
