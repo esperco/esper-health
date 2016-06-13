@@ -1,12 +1,10 @@
 open Lwt
 open Log
 
-(* something like "proc.ip-10-136-83-8.scgi41001" *)
-let instance_id = ref "unknown"
+let ( >>=! ) = Lwt.bind
 
-let health_check () =
+let health_check prefix =
   let pid = Unix.getpid () in
-  let prefix = "wolverine.api." ^ !instance_id in
   (match Util_linux.get_resident_memory_size pid with
    | None -> return ()
    | Some x ->
@@ -19,7 +17,7 @@ let health_check () =
 
 let repeat_every_minute f =
   let rec loop () =
-    ignore (Lwt_unix.sleep 60. >>= loop);
+    ignore (Lwt_unix.sleep 60. >>=! loop);
     catch f
       (fun e ->
          let msg = string_of_exn e in
@@ -32,13 +30,13 @@ let repeat_every_minute f =
 (*
    Produce health reports every minute.
 
-   The instance ID is the prefix used for the Cloudwatch metrics and
+   cloudwatch_prefix is the prefix used for the Cloudwatch metrics and
    should follow its syntax constraints. Something like
      "wolverine.api.proc.ip-10-165-33-20.41001"
    is valid.
 *)
-let monitor () =
-  Cloudwatch.send_event ("wolverine.api." ^ !instance_id ^ ".start")
+let monitor cloudwatch_prefix =
+  Cloudwatch.send_event (cloudwatch_prefix ^ ".start")
   >>= fun () ->
-  repeat_every_minute health_check;
+  repeat_every_minute (fun () -> health_check cloudwatch_prefix);
   return ()
