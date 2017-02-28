@@ -32,7 +32,7 @@ let repeat_every_minute f =
 
    cloudwatch_prefix is the prefix used for the Cloudwatch metrics and
    should follow its syntax constraints. Something like
-     "wolverine.api.proc.ip-10-165-33-20.41001"
+     "wolverine.api.proc.ip-10-165-33-20.1"
    is valid.
 *)
 let monitor cloudwatch_prefix =
