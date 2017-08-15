@@ -8,4 +8,4 @@ It won't build as is but most of the code was used in production.
 Description
 -----------
 
-Sorry, no description yet :cry:
+Sends are heartbeat every minute.
